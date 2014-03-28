@@ -1,0 +1,6 @@
+[submodule "Plugins/IO/Playrec"]
+	path = Plugins/IO/Playrec
+	url = https://github.com/Janwillhaus/Playrec-ProcessChain-Plugin.git
+[submodule "Plugins/IO/Playrec-Binaries"]
+	path = Plugins/IO/Playrec-Binaries
+	url = https://github.com/Janwillhaus/Playrec-Binaries.git
