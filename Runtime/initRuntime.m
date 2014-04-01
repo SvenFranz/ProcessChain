@@ -6,7 +6,7 @@ function ChainVersion = initRuntime()
 %           function call 'indentcode' added
 % Ver. 0.11 changes in Chain are checked        SF  
 clc;
-ChainVersion = .12;
+ChainVersion = .13;
 if nargout == 1; return; end
 checkVersion(ChainVersion);
     
@@ -76,7 +76,7 @@ rehash path;
                 elseif tmpMyNum > files(fileNo).datenum && ~strcmp(file, 'init_Plugin.m');
                     TempToPlugins(myPath, file, currPath)
                 end
-            elseif ~strcmp(file, 'newPlug.m') && isempty(strfind(file, '.asv'))
+            elseif ~strcmp(file, 'newPlug.m') && isempty(strfind(file, '.asv')) && isempty(strfind(file, '.git'))
                 if tmpMyNum ~= files(fileNo).datenum
                     copyfile([myPath filesep file], [currPath filesep file]);
                 end

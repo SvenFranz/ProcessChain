@@ -147,7 +147,9 @@ blnHasChanges = false;
         if ~isempty(which('VarUpdated')) && exist('BlockSettingsIn', 'var') && ~isempty(fieldnames(BlockSettingsIn))
             if ~strcmp(mat2str(oldVal), mat2str(val))
                 blnHasChanges = true;
-                VarUpdated(varName);
+                if ~(strcmp(varName, 'Enabled') || strcmp(varName, 'Debug'))
+                    VarUpdated(varName);
+                end
             end
         end
     end
@@ -160,7 +162,10 @@ blnHasChanges = false;
         if ~isempty(which('VarUpdated'))
             varnames = sort(fieldnames(vars));
             for count = 1 : length(varnames)
-                VarUpdated(char(varnames(count)));
+                varName = char(varnames(count));
+                if ~(strcmp(varName, 'Enabled') || strcmp(varName, 'Debug'))
+                    VarUpdated(varName);
+                end
             end
         end
     end
