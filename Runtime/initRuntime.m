@@ -6,7 +6,7 @@ function ChainVersion = initRuntime()
 %           function call 'indentcode' added
 % Ver. 0.11 changes in Chain are checked        SF  
 clc;
-ChainVersion = .12;
+ChainVersion = .13;
 if nargout == 1; return; end
 checkVersion(ChainVersion);
     

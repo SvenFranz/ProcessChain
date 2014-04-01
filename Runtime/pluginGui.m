@@ -16,7 +16,9 @@ initRuntime();
 FileName = '';
 hasChanges = false;
 rootFolder = pwd;
-breakpointsBuffer = {};
+% breakpointsBuffer = {};
+blnIsRunning = false;
+blnMouseDown = false;
 tempChain = [];
 
 if (nargin > 0 && ischar(chain)) || (nargin == 0 && exist(['Runtime' filesep 'RecentFiles.mat'], 'file'))
@@ -42,7 +44,7 @@ if ~exist('chain', 'var') || isempty(chain)
 end
 
 load GUI_controls.mat
-handles.figure = figure('Units', 'normalized', 'position', [.15 .2 .7 .6], 'CloseRequestFcn', @CloseReq, 'tag', 'main');
+handles.figure = figure('Units', 'normalized', 'position', [.15 .2 .7 .6], 'CloseRequestFcn', @CloseReq, 'tag', 'main', 'WindowButtonUpFcn', @WindowButtonUpFcn);
 set(handles.figure, 'MenuBar', 'none');
 
 handles.menubar(1) = uimenu('Parent', handles.figure, 'Label', 'File', 'Tag','uimenubar1');
@@ -116,6 +118,7 @@ drawnow;
 loadData()
 setPanelChainTitle();
 
+
     function updateRecentFiles(ConfigFile)
         if exist(['Runtime' filesep 'RecentFiles.mat'], 'file')
             tmp = load(['Runtime' filesep 'RecentFiles.mat']);
@@ -174,7 +177,7 @@ setPanelChainTitle();
 
     function new(hObject, ~)
         if checkHasChanges()
-            if isempty(fieldnames(chain)) || strcmp(questdlg('Neue Pluginskette erstellen?', '', 'Ja', 'Nein', 'Nein'), 'Ja')
+            if isempty(fieldnames(chain)) || strcmp(questdlg('Neue Pluginkette erstellen?', '', 'Ja', 'Nein', 'Nein'), 'Ja')
                 chain = struct;
                 chain.init = init_Plugin;
                 FileName = '';
@@ -230,7 +233,7 @@ setPanelChainTitle();
     function returnValue = checkHasChanges()
         returnValue = true;
         if hasChanges
-            DialogValue = questdlg('Pluginskette wurde geändert! Änderungen speichern?', '', 'Ja', 'Nein', 'Abbrechen', 'Abbrechen');
+            DialogValue = questdlg('Pluginkette wurde geändert! Änderungen speichern?', '', 'Ja', 'Nein', 'Abbrechen', 'Abbrechen');
             if strcmp(DialogValue, 'Ja')
                 saveConfig([], [])
             elseif strcmp(DialogValue, 'Abbrechen')
@@ -360,31 +363,8 @@ setPanelChainTitle();
 
     function run(hObject, ~)
         if strcmp(get(hObject, 'Tag'), 'run') || strcmp(get(hObject, 'Tag'), 'debug')
-            if ~isempty(InfoBrowser)
-                InfoBrowser.setHtmlText('');
-            end
-            struct();
-            cd(rootFolder);
-            initRuntime();
+            blnIsRunning = true;
             blnDebug = strcmp(get(hObject, 'Tag'), 'debug');
-            saveSettings(['..' filesep 'Temp' filesep 'temp'], chain);
-            chain = loadSettings(['..' filesep 'Temp' filesep 'temp']);
-            loadData();
-            %             breakpoints = dbstatus;
-            %             breakpointsBuffer = {};
-            %             for count = 1 : length(breakpoints)
-            %                 if ~isempty(strfind(breakpoints(count).file, [filesep 'Temp' filesep 'Plugins' filesep]))
-            %                     if blnDebug == false
-            %                         eval(['dbclear in ' breakpoints(count).file ';']);
-            %                     end
-            %                 elseif ~isempty(strfind(breakpoints(count).file, [filesep 'Plugins' filesep]))
-            %                     if blnDebug
-            %                         eval(['dbstop in ' strrep(breakpoints(count).file, [filesep 'Plugins' filesep], [filesep 'Temp' filesep 'Plugins' filesep]) ' at ' num2str(breakpoints(count).line) ';']);
-            %                         breakpointsBuffer{length(breakpointsBuffer) + 1} = strrep(breakpoints(count).file, [filesep 'Plugins' filesep], [filesep 'Temp' filesep 'Plugins' filesep]);
-            %                         edit(strrep(breakpoints(count).file, [filesep 'Plugins' filesep], [filesep 'Temp' filesep 'Plugins' filesep]));
-            %                     end
-            %                 end
-            %             end
             clc;
             for count = 1 : 8
                 set(handles.toolbarItem(count), 'enable', 'off');
@@ -412,7 +392,30 @@ setPanelChainTitle();
                 set(handles.uimenuItem(11), 'visible', 'on', 'enable', 'on', 'Accelerator', 'R');
                 set(handles.uimenuItem(12), 'enable', 'off');
             end
+            if ~isempty(InfoBrowser)
+                InfoBrowser.setHtmlText('');
+            end
             drawnow;
+            cd(rootFolder);
+            initRuntime();
+            saveSettings(['..' filesep 'Temp' filesep 'temp'], chain);
+            chain = loadSettings(['..' filesep 'Temp' filesep 'temp']);
+            loadData();
+            %             breakpoints = dbstatus;
+            %             breakpointsBuffer = {};
+            %             for count = 1 : length(breakpoints)
+            %                 if ~isempty(strfind(breakpoints(count).file, [filesep 'Temp' filesep 'Plugins' filesep]))
+            %                     if blnDebug == false
+            %                         eval(['dbclear in ' breakpoints(count).file ';']);
+            %                     end
+            %                 elseif ~isempty(strfind(breakpoints(count).file, [filesep 'Plugins' filesep]))
+            %                     if blnDebug
+            %                         eval(['dbstop in ' strrep(breakpoints(count).file, [filesep 'Plugins' filesep], [filesep 'Temp' filesep 'Plugins' filesep]) ' at ' num2str(breakpoints(count).line) ';']);
+            %                         breakpointsBuffer{length(breakpointsBuffer) + 1} = strrep(breakpoints(count).file, [filesep 'Plugins' filesep], [filesep 'Temp' filesep 'Plugins' filesep]);
+            %                         edit(strrep(breakpoints(count).file, [filesep 'Plugins' filesep], [filesep 'Temp' filesep 'Plugins' filesep]));
+            %                     end
+            %                 end
+            %             end
             myError = process(chain, blnDebug);
             if ~isempty(myError)
                 appendInfoPanel(myError)
@@ -457,6 +460,7 @@ setPanelChainTitle();
         end
         loadData();
         drawnow;
+        blnIsRunning = false;
     end
 
     function appendInfoPanel(strpic_message)
@@ -519,11 +523,13 @@ setPanelChainTitle();
                 selectedPlugin.chainIdx = idx;
                 selectedPlugin.chainString = parentchain;
                 showSettings()
-                if ishandle(handles.toolbarItem(5))
+                if blnIsRunning == false && ishandle(handles.toolbarItem(5))
                     if isfield(selectedPlugin.plugin, 'plugins')
                         set(handles.toolbarItem(5), 'Enable', 'on');
+                        set(handles.uimenuItem(6), 'Enable', 'on');
                     else
                         set(handles.toolbarItem(5), 'Enable', 'off');
+                        set(handles.uimenuItem(6), 'Enable', 'off');
                     end
                 end
                 if ~isempty(selectedPlugin.chainString)
@@ -531,25 +537,31 @@ setPanelChainTitle();
                 else
                     tempchain = chain;
                 end
-                if ishandle(handles.toolbarItem(7))
+                if blnIsRunning == false && ishandle(handles.toolbarItem(7))
                     if selectedPlugin.chainIdx > 1
                         set(handles.toolbarItem(7), 'Enable', 'on');
+                        set(handles.uimenuItem(8), 'Enable', 'on');
                     else
                         set(handles.toolbarItem(7), 'Enable', 'off');
+                        set(handles.uimenuItem(8), 'Enable', 'off');
                     end
                 end
-                if ishandle(handles.toolbarItem(8))
+                if blnIsRunning == false && ishandle(handles.toolbarItem(8))
                     if length(fieldnames(tempchain)) > selectedPlugin.chainIdx
                         set(handles.toolbarItem(8), 'Enable', 'on');
+                        set(handles.uimenuItem(9), 'Enable', 'on');
                     else
                         set(handles.toolbarItem(8), 'Enable', 'off');
+                        set(handles.uimenuItem(9), 'Enable', 'off');
                     end
                 end
-                if ishandle(handles.toolbarItem(6))
+                if blnIsRunning == false && ishandle(handles.toolbarItem(6))
                     if strcmp(selectedPlugin.name, 'init')
                         set(handles.toolbarItem(6), 'Enable', 'off');
+                        set(handles.uimenuItem(7), 'Enable', 'off');
                     else
                         set(handles.toolbarItem(6), 'Enable', 'on');
+                        set(handles.uimenuItem(7), 'Enable', 'on');
                     end
                 end
                 if strcmp(get(handles.figure, 'SelectionType'), 'open')
@@ -600,10 +612,13 @@ setPanelChainTitle();
             elseif strcmp(type, 'numeric') || strcmp(type, 'integer')
                 pos([1 3]) = [.50 .42];
                 h = uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', value, 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
-                pos([1 3]) = [.92 .07];
                 myMin = max(myMin, value - 50);
                 myMax = min(myMax, value + 50);
-                uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'slider', 'Value', round(value), 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setSliderValue, 'BackgroundColor', [1 1 1], 'Min', myMin, 'Max', myMax, 'UserData', h, 'SliderStep',[.01 .01]);
+                pos([1 3]) = [.92 .07/2];
+                img = mat{12};
+                h1 = uicontrol('Parent', handles.panelSettings, 'tag', [char(vars(count)) '-'], 'Style', 'pushbutton', 'Units', 'normalized', 'Position', pos, 'Callback', @setSliderValue, 'UserData', h, 'CData', img, 'ButtonDownFcn', @setSliderValue, 'Enable', 'inactive');
+                pos([1 3]) = [.92+pos(3) .07/2];
+                h1 = uicontrol('Parent', handles.panelSettings, 'tag', [char(vars(count)) '+'], 'Style', 'pushbutton', 'Units', 'normalized', 'Position', pos, 'Callback', @setSliderValue, 'UserData', h, 'CData', img(end : -1 : 1, end : -1 : 1, :), 'SelectionHighlight', 'off', 'ButtonDownFcn', @setSliderValue, 'Enable', 'inactive');
             else
                 uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', value, 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
             end
@@ -611,14 +626,38 @@ setPanelChainTitle();
     end
 
     function setSliderValue(hObject, ~)
+        img = get(hObject, 'CData');
+        img2 = img;
+        img2(img2 == 0) = .7;
+        set(hObject, 'CData', img2);
+        drawnow;
+        blnMouseDown = true;
         var = get(hObject,'Tag');
-        value = round(get(hObject, 'Value'));
-        [~ , ~, myMin, myMax, ~] = selectedPlugin.plugin.getVar(var);
-        myMin = max(myMin, value - 50);
-        myMax = min(myMax, value + 50);
-        set(hObject, 'Min', myMin, 'Max', myMax, 'Value', value);
-        set(get(hObject, 'UserData'), 'String', value);
-        setValue(get(hObject, 'UserData'), []);
+        factor = 1;
+        if strcmp(var(end), '-')
+            factor = -1;
+        end
+        step = 1;
+        var = var(1 : end - 1);
+        [value , type, myMin, myMax, ~] = selectedPlugin.plugin.getVar(var);
+        if strcmp(type, 'numeric')
+            if ~(isinf(myMin) || isinf(myMax))
+                step = (myMax - myMin) / 100;
+            end            
+        end
+        counter = 1;
+        while blnMouseDown
+            value = value + factor  * step;
+            set(get(hObject, 'UserData'), 'String', value);
+            setValue(get(hObject, 'UserData'), []);
+            pause(.1);
+            if mod(counter, 20) == 0 && step <= 10000;
+                step = step * 10;
+            end
+            counter = counter + 1;
+        end
+        set(hObject, 'CData', img);
+        drawnow;
     end
 
     function setValue(hObject, ~)
@@ -649,6 +688,7 @@ setPanelChainTitle();
             plugin = char(pluginlist{selectedPlugin.listIdx});
             if selectedPlugin.plugin.getVar('Enabled')
                 pluginlist{selectedPlugin.listIdx} = ['+ ' plugin(3 : end)];
+                selectedPlugin.plugin.UpdateVarsAfterInit();
             else
                 pluginlist{selectedPlugin.listIdx} = ['- ' plugin(3 : end)];
             end
@@ -676,6 +716,11 @@ setPanelChainTitle();
                 end
             end
         end
+    end
+
+    function WindowButtonUpFcn(~,~)
+        blnMouseDown = false;
+        drawnow;
     end
 
     function CloseReq(~,~)
@@ -707,6 +752,7 @@ setPanelChainTitle();
         msgbox(VersionInfo, 'About...', 'help', 'modal');
     end
 end
+
 
 %--------------------Licence ---------------------------------------------
 % Copyright (c) <2014> S. Franz
