@@ -12,7 +12,6 @@ if ~isempty(VersionHasErrors) && VersionHasErrors
 end
 
 clc; close all;
-initRuntime();
 FileName = '';
 hasChanges = false;
 rootFolder = pwd;
@@ -58,6 +57,10 @@ handles.uimenuItem(6) = uimenu('Parent', handles.menubar(2), 'Label', 'Add Plugi
 handles.uimenuItem(7) = uimenu('Parent', handles.menubar(2), 'Label', 'Remove Plugin', 'Callback', @changePlug, 'Tag', 'rem');
 handles.uimenuItem(8) = uimenu('Parent', handles.menubar(2), 'Label', 'Up', 'Callback', @changePlug, 'Tag', 'up');
 handles.uimenuItem(9) = uimenu('Parent', handles.menubar(2), 'Label', 'Down', 'Callback', @changePlug, 'Tag', 'down');
+handles.uimenuItem(14) = uimenu('Parent', handles.menubar(2), 'Label', 'Selected Plugin','Tag', 'down', 'Separator','on');
+handles.uimenuItem(15) = uimenu('Parent', handles.uimenuItem(14), 'Label', 'Edit Sourcecode', 'Callback', @editSourcecode, 'Tag', 'down');
+handles.uimenuItem(16) = uimenu('Parent', handles.uimenuItem(14), 'Label', 'Edit merged Sourcecode', 'Callback', @editMergedSourcecode, 'Tag', 'down');
+handles.uimenuItem(17) = uimenu('Parent', handles.uimenuItem(14), 'Label', 'Reset Parameters', 'Callback', @ResetParameters, 'Tag', 'down', 'Separator','on');
 handles.menubar(3) = uimenu('Parent', handles.figure, 'Label', 'Run/Debug', 'Tag','uimenubar3');
 handles.uimenuItem(10) = uimenu('Parent', handles.menubar(3), 'Label', 'Run', 'Callback', @run, 'Tag', 'run', 'Accelerator', 'R');
 handles.uimenuItem(11) = uimenu('Parent', handles.menubar(3), 'Label', 'Stop', 'Callback', @run, 'Tag', 'stop', 'visible', 'off', 'Accelerator', 'R');
@@ -90,6 +93,7 @@ handles.listbox = uicontrol('Parent', handles.panelChain, 'Style', 'listbox', 'F
 ContextMenu=uicontextmenu;
 uimenu('Parent', ContextMenu, 'Label', 'Edit Sourcecode', 'Callback', @editSourcecode);
 uimenu('Parent', ContextMenu, 'Label', 'Edit merged Sourcecode', 'Callback', @editMergedSourcecode);
+uimenu('Parent', ContextMenu, 'Label', 'Reset Parameters', 'Callback', @ResetParameters, 'Separator','on');
 set(handles.listbox,'UIContextMenu',ContextMenu);
 
 try
@@ -117,7 +121,6 @@ selectedPlugin.name = [];
 drawnow;
 loadData()
 setPanelChainTitle();
-
 
     function updateRecentFiles(ConfigFile)
         if exist(['Runtime' filesep 'RecentFiles.mat'], 'file')
@@ -165,6 +168,7 @@ setPanelChainTitle();
     end
 
     function editMergedSourcecode(hObject, ~)
+        initRuntime();
         selectedPlugin.listIdx = get(handles.listbox, 'value');
         pluginlist = get(handles.listbox, 'String');
         if ~isempty(pluginlist) && selectedPlugin.listIdx > 0
@@ -296,6 +300,8 @@ setPanelChainTitle();
             tempchain = chain;
         end
         if strcmp(get(hObject, 'Tag'), 'add')
+            cd(rootFolder);
+            initRuntime();
             [File, PathName] = uigetfile('*_Plugin.m',  'Plugin-files (*_Plugin.m)', ['Plugins' filesep]);
             if strfind(File, '_Plugin.m')
                 pluginName = inputdlg({'Name'},'',1,{strrep(File, '_Plugin.m', '')});
@@ -716,6 +722,27 @@ setPanelChainTitle();
                 end
             end
         end
+    end
+
+    function ResetParameters(~,~)
+        newPlug = [];
+        chainStringTemp = selectedPlugin.chainString;
+        chainStringTemp{length(chainStringTemp) + 1} = selectedPlugin.name;
+        try
+            newPlug = getfield(loadSettings(FileName), chainStringTemp{:});
+        catch exp
+        end
+        if isempty(newPlug)
+            newPlug = eval([selectedPlugin.plugin.plugin '(''' selectedPlugin.name ''')']);
+            if isfield(selectedPlugin.plugin, 'plugins')
+                newPlug.plugins = selectedPlugin.plugin.plugins;
+            end
+            appendInfoPanel(['<font color="black">Reset Parameters of Plugin ''' selectedPlugin.name ''' to default values!</font><br>']);
+        else
+            appendInfoPanel(['<font color="black">Reset Parameters of Plugin ''' selectedPlugin.name '''</font><br>']);
+        end
+        chain = setfield(chain, chainStringTemp{:}, newPlug);
+        loadData();
     end
 
     function WindowButtonUpFcn(~,~)

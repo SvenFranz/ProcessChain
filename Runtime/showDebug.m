@@ -92,18 +92,18 @@ end
             else
                 minMax = get(this.handles.myAxes(count), 'UserData');
                 if isempty(minMax)
-                    minMax(1) = min(min(data));
-                    minMax(2) = max(max(data));
+                    minMax(1) = min(min(data)) - eps;
+                    minMax(2) = max(max(data)) + eps;
                 else
-                    minMax(1) = min(minMax(1), min(min(data)));
-                    minMax(2) = max(minMax(2), max(max(data)));
+                    minMax(1) = min(minMax(1), min(min(data))) - eps;
+                    minMax(2) = max(minMax(2), max(max(data))) + eps;
                 end
                 plot(data, 'parent', this.handles.myAxes(count));
                 ylim(this.handles.myAxes(count), minMax);
                 xlim(this.handles.myAxes(count), [1 size(data, 1)]);
                 set(this.handles.myAxes(count), 'UserData', minMax);
             end
-            title(this.handles.myAxes(count), char(plotNames{count}));
+            title(this.handles.myAxes(count), strrep(char(plotNames{count}), '_', '\_'));
         end
         set(this.handles.listbox, 'Value', max(1, min(length(list), get(this.handles.listbox, 'Value'))));
         set(this.handles.listbox, 'String', list);
