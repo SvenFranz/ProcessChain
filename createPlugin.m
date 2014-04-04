@@ -17,8 +17,8 @@ end
 
 if ~isempty(pluginname)
     pluginname = [pluginname '_Plugin'];
-    file_in = fopen(fullfile('Runtime', 'PluginTemplates', 'newPlug.m'));
-    file_out = fopen(fullfile('Plugins', [pluginname '.m']), 'w');
+    file_in = fopen(fullfile('.', 'Runtime', 'PluginTemplates', 'newPlug.m'));
+    file_out = fopen(fullfile('.', 'Plugins', [pluginname '.m']), 'w');
     tline = fgets(file_in);
     fwrite(file_out, replaceStrings(tline));
     addData = true;

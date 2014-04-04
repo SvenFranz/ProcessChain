@@ -12,19 +12,18 @@ if ~isempty(VersionHasErrors) && VersionHasErrors
 end
 
 clc; close all;
-initRuntime();
 FileName = '';
-hasChanges = false;
+blnHasChanges = false;
 rootFolder = pwd;
 % breakpointsBuffer = {};
 blnIsRunning = false;
 blnMouseDown = false;
 tempChain = [];
 
-if (nargin > 0 && ischar(chain)) || (nargin == 0 && exist(['Runtime' filesep 'RecentFiles.mat'], 'file'))
-    if nargin == 0 && exist(['Runtime' filesep 'RecentFiles.mat'], 'file')
+if (nargin > 0 && ischar(chain)) || (nargin == 0 && exist(['.' filesep 'Runtime' filesep 'RecentFiles.mat'], 'file'))
+    if nargin == 0 && exist(['.' filesep 'Runtime' filesep 'RecentFiles.mat'], 'file')
         chain = [];
-        tmp = load(['Runtime' filesep 'RecentFiles.mat']);
+        tmp = load(['.' filesep 'Runtime' filesep 'RecentFiles.mat']);
         if ~isempty(tmp.RecentFiles)
             chain = char(tmp.RecentFiles{1});
         end
@@ -58,6 +57,10 @@ handles.uimenuItem(6) = uimenu('Parent', handles.menubar(2), 'Label', 'Add Plugi
 handles.uimenuItem(7) = uimenu('Parent', handles.menubar(2), 'Label', 'Remove Plugin', 'Callback', @changePlug, 'Tag', 'rem');
 handles.uimenuItem(8) = uimenu('Parent', handles.menubar(2), 'Label', 'Up', 'Callback', @changePlug, 'Tag', 'up');
 handles.uimenuItem(9) = uimenu('Parent', handles.menubar(2), 'Label', 'Down', 'Callback', @changePlug, 'Tag', 'down');
+handles.uimenuItem(14) = uimenu('Parent', handles.menubar(2), 'Label', 'Selected Plugin','Tag', 'down', 'Separator','on');
+handles.uimenuItem(15) = uimenu('Parent', handles.uimenuItem(14), 'Label', 'Edit Sourcecode', 'Callback', @editSourcecode, 'Tag', 'down');
+handles.uimenuItem(16) = uimenu('Parent', handles.uimenuItem(14), 'Label', 'Edit merged Sourcecode', 'Callback', @editMergedSourcecode, 'Tag', 'down');
+handles.uimenuItem(17) = uimenu('Parent', handles.uimenuItem(14), 'Label', 'Reset Parameters', 'Callback', @ResetParameters, 'Tag', 'down', 'Separator','on');
 handles.menubar(3) = uimenu('Parent', handles.figure, 'Label', 'Run/Debug', 'Tag','uimenubar3');
 handles.uimenuItem(10) = uimenu('Parent', handles.menubar(3), 'Label', 'Run', 'Callback', @run, 'Tag', 'run', 'Accelerator', 'R');
 handles.uimenuItem(11) = uimenu('Parent', handles.menubar(3), 'Label', 'Stop', 'Callback', @run, 'Tag', 'stop', 'visible', 'off', 'Accelerator', 'R');
@@ -90,6 +93,7 @@ handles.listbox = uicontrol('Parent', handles.panelChain, 'Style', 'listbox', 'F
 ContextMenu=uicontextmenu;
 uimenu('Parent', ContextMenu, 'Label', 'Edit Sourcecode', 'Callback', @editSourcecode);
 uimenu('Parent', ContextMenu, 'Label', 'Edit merged Sourcecode', 'Callback', @editMergedSourcecode);
+uimenu('Parent', ContextMenu, 'Label', 'Reset Parameters', 'Callback', @ResetParameters, 'Separator','on');
 set(handles.listbox,'UIContextMenu',ContextMenu);
 
 try
@@ -118,10 +122,9 @@ drawnow;
 loadData()
 setPanelChainTitle();
 
-
     function updateRecentFiles(ConfigFile)
-        if exist(['Runtime' filesep 'RecentFiles.mat'], 'file')
-            tmp = load(['Runtime' filesep 'RecentFiles.mat']);
+        if exist(['.' filesep 'Runtime' filesep 'RecentFiles.mat'], 'file')
+            tmp = load(['.' filesep 'Runtime' filesep 'RecentFiles.mat']);
             RecentFiles = tmp.RecentFiles;
             tmpRecentFiles = {};
             if ~isempty(ConfigFile)
@@ -137,7 +140,7 @@ setPanelChainTitle();
         elseif ~isempty(ConfigFile)
             RecentFiles{1} = ConfigFile;
         end
-        save(['Runtime' filesep 'RecentFiles.mat'], 'RecentFiles');
+        save(['.' filesep 'Runtime' filesep 'RecentFiles.mat'], 'RecentFiles');
         for count = 1 : length(handles.RecentFiles)
             if ishandle(handles.RecentFiles(count))
                 delete(handles.RecentFiles)
@@ -158,20 +161,32 @@ setPanelChainTitle();
             plugin = [plugin(strfind(plugin, '(') + 1 : end -1) '_Plugin.m'];
             file = findFile(plugin, ['./' filesep 'Plugins']);
             if isempty(file)
-                file = findFile(plugin, ['./' filesep 'Runtime']);
+                file = findFile(plugin, ['.' filesep 'Runtime']);
+                if isempty(file)
+                    if ~isempty(findFile([plugin(1 : end -1) 'p'], ['.' filesep 'Plugins']))
+                       msgbox('This Plugin is compiled in p-Code and not editable!', 'modal'); 
+                    end                    
+                end
             end
-            edit(file);
+            if ~isempty(file)
+                edit(file);
+            end
         end
     end
 
     function editMergedSourcecode(hObject, ~)
+        initRuntime();
         selectedPlugin.listIdx = get(handles.listbox, 'value');
         pluginlist = get(handles.listbox, 'String');
         if ~isempty(pluginlist) && selectedPlugin.listIdx > 0
             plugin = char(pluginlist{selectedPlugin.listIdx});
             plugin = strtrim(strrep(plugin(2 : end), '| ', '')); %strtrim(plugin(2 : end));
             plugin = [plugin(strfind(plugin, '(') + 1 : end -1) '_Plugin.m'];
-            edit(which(plugin));
+            if ~isempty(findFile([plugin(1 : end -1) 'p'], ['./Temp' filesep 'Plugins']))
+                msgbox('This Plugin is compiled in p-Code and not editable!', 'modal');
+            else
+                edit(which(plugin));
+            end
         end
     end
 
@@ -184,7 +199,8 @@ setPanelChainTitle();
                 setPanelChainTitle();
                 tempChain = [];
                 loadData();
-                hasChanges = false;
+                blnHasChanges = false;
+                setPanelChainTitle();
                 drawnow;
             end
             set(handles.figure, 'Name', FileName);
@@ -195,6 +211,9 @@ setPanelChainTitle();
         title = FileName;
         if isempty(title)
             title = 'unsaved';
+        end
+        if blnHasChanges
+            title = [title '*'];
         end
         set(handles.panelChain, 'Title', ['Pluginchain: ' title]);
     end
@@ -224,7 +243,8 @@ setPanelChainTitle();
             setPanelChainTitle();
             chain = loadSettings(FileName);
             loadData();
-            hasChanges = false;
+            blnHasChanges = false;
+            setPanelChainTitle();
             updateRecentFiles(FileName);
         end
         set(handles.figure, 'Name', FileName);
@@ -232,7 +252,7 @@ setPanelChainTitle();
 
     function returnValue = checkHasChanges()
         returnValue = true;
-        if hasChanges
+        if blnHasChanges
             DialogValue = questdlg('Pluginkette wurde geändert! Änderungen speichern?', '', 'Ja', 'Nein', 'Abbrechen', 'Abbrechen');
             if strcmp(DialogValue, 'Ja')
                 saveConfig([], [])
@@ -265,7 +285,8 @@ setPanelChainTitle();
             else
                 saveSettings(FileName, chain);
                 returnValue = true;
-                hasChanges = false;
+                blnHasChanges = false;
+                setPanelChainTitle();
                 updateRecentFiles(FileName);
             end
         end
@@ -280,7 +301,8 @@ setPanelChainTitle();
                 FileName = File(1 : end - 4);
                 setPanelChainTitle();
                 saveConfig(hObject, []);
-                hasChanges = false;
+                blnHasChanges = false;
+                setPanelChainTitle();
                 returnValue = true;
                 updateRecentFiles(FileName);
             end
@@ -296,6 +318,8 @@ setPanelChainTitle();
             tempchain = chain;
         end
         if strcmp(get(hObject, 'Tag'), 'add')
+            cd(rootFolder);
+            initRuntime();
             [File, PathName] = uigetfile('*_Plugin.m',  'Plugin-files (*_Plugin.m)', ['Plugins' filesep]);
             if strfind(File, '_Plugin.m')
                 pluginName = inputdlg({'Name'},'',1,{strrep(File, '_Plugin.m', '')});
@@ -303,7 +327,8 @@ setPanelChainTitle();
                     newChain = tempchain;
                     newChain.(selectedPlugin.name).plugins.(char(pluginName)) = eval(File(1 : end - 2));
                     tempName = char(pluginName);
-                    hasChanges = true;
+                    blnHasChanges = true;
+                    setPanelChainTitle();
                 else
                     msgbox(['''' File ''' is not a valid Plugin-File!']);
                 end
@@ -317,7 +342,8 @@ setPanelChainTitle();
                 for count = idx
                     newChain.(char(plugins(count)))  = tempchain.(char(plugins(count)));
                 end
-                hasChanges = true;
+                blnHasChanges = true;
+                setPanelChainTitle();
             end
         elseif strcmp(get(hObject, 'Tag'), 'up')
             if selectedPlugin.chainIdx > 1
@@ -331,7 +357,8 @@ setPanelChainTitle();
                 for count = selectedPlugin.chainIdx + 1 : length(plugins)
                     newChain.(char(plugins(count)))  = tempchain.(char(plugins(count)));
                 end
-                hasChanges = true;
+                blnHasChanges = true;
+                setPanelChainTitle();
             end
         elseif strcmp(get(hObject, 'Tag'), 'down')
             if length(fieldnames(tempchain)) > selectedPlugin.chainIdx
@@ -345,7 +372,8 @@ setPanelChainTitle();
                 for count = selectedPlugin.chainIdx + 2 : length(plugins)
                     newChain.(char(plugins(count)))  = tempchain.(char(plugins(count)));
                 end
-                hasChanges = true;
+                blnHasChanges = true;
+                setPanelChainTitle();
             end
         end
         if exist('newChain', 'var')
@@ -416,13 +444,17 @@ setPanelChainTitle();
             %                     end
             %                 end
             %             end
-            myError = process(chain, blnDebug);
+            myError = process(chain, blnDebug, @showSettings);
             if ~isempty(myError)
                 appendInfoPanel(myError)
             end
         end
         if exist(['Temp' filesep 'temp.cfg'], 'file')
             delete(['Temp' filesep 'temp.cfg']);
+        end
+        try 
+            dbquit;
+        catch exp
         end
         %         breakpoints = dbstatus;
         %         for count = 1 : length(breakpointsBuffer)
@@ -570,6 +602,9 @@ setPanelChainTitle();
                         field = 'Debug';
                     elseif strcmp(get(handles.figure,'currentModifier'), 'control')
                         field = 'Enabled';
+                        if plugin.IsDisabled() == true && blnIsRunning == true
+                            field = [];
+                        end
                     end
                     if ~isempty(field)
                         obj = findobj('Style', 'checkbox', '-and', 'Tag', field);
@@ -601,6 +636,8 @@ setPanelChainTitle();
             if strcmp(type, 'bool')
                 h = uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'checkbox', 'value', value, 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue);
                 if strcmp(selectedPlugin.name, 'init') && (strcmp(char(vars(count)), 'Enabled') || strcmp(char(vars(count)), 'Debug'))
+                    set(h, 'enable', 'off');
+                elseif strcmp(char(vars(count)), 'Enabled') && selectedPlugin.plugin.IsDisabled() == true && blnIsRunning
                     set(h, 'enable', 'off');
                 end
             elseif strcmp(type, 'list')
@@ -670,7 +707,8 @@ setPanelChainTitle();
         oldVal = selectedPlugin.plugin.getVar(var);
         selectedPlugin.plugin.setVar(var, value);
         if selectedPlugin.plugin.hasChanges() || ~strcmp(mat2str(oldVal), mat2str(value))
-            hasChanges = true;
+            blnHasChanges = true;
+            setPanelChainTitle();
         end
         value = selectedPlugin.plugin.getVar(var);
         if strcmp(get(hObject, 'Style'), 'popupmenu')
@@ -688,7 +726,7 @@ setPanelChainTitle();
             plugin = char(pluginlist{selectedPlugin.listIdx});
             if selectedPlugin.plugin.getVar('Enabled')
                 pluginlist{selectedPlugin.listIdx} = ['+ ' plugin(3 : end)];
-                selectedPlugin.plugin.UpdateVarsAfterInit();
+                % selectedPlugin.plugin.UpdateVarsAfterInit();
             else
                 pluginlist{selectedPlugin.listIdx} = ['- ' plugin(3 : end)];
             end
@@ -716,6 +754,27 @@ setPanelChainTitle();
                 end
             end
         end
+    end
+
+    function ResetParameters(~,~)
+        newPlug = [];
+        chainStringTemp = selectedPlugin.chainString;
+        chainStringTemp{length(chainStringTemp) + 1} = selectedPlugin.name;
+        try
+            newPlug = getfield(loadSettings(FileName), chainStringTemp{:});
+        catch exp
+        end
+        if isempty(newPlug)
+            newPlug = eval([selectedPlugin.plugin.plugin '(''' selectedPlugin.name ''')']);
+            if isfield(selectedPlugin.plugin, 'plugins')
+                newPlug.plugins = selectedPlugin.plugin.plugins;
+            end
+            appendInfoPanel(['<font color="black">Reset Parameters of Plugin ''' selectedPlugin.name ''' to default values!</font><br>']);
+        else
+            appendInfoPanel(['<font color="black">Reset Parameters of Plugin ''' selectedPlugin.name '''</font><br>']);
+        end
+        chain = setfield(chain, chainStringTemp{:}, newPlug);
+        loadData();
     end
 
     function WindowButtonUpFcn(~,~)
