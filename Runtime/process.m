@@ -16,9 +16,6 @@ AlgoCom = struct;
 if nargin < 2
     blnDebug = false;
 end
-if nargin < 3
-    optionalCallbackAfterInit = [];
-end
 if ischar(chain) && exist(['Settings' filesep chain '.cfg'], 'file')
     chain = loadSettings(chain);
 end
@@ -29,8 +26,11 @@ end
 try
     if isstruct(chain) && ~isempty(fieldnames(chain))
         [~] = chain_init(chain, []);
-        if ~isempty(optionalCallbackAfterInit)
-            optionalCallbackAfterInit()
+        if exist('optionalCallbackAfterInit', 'var') && isa(optionalCallbackAfterInit, 'function_handle')
+            try
+            optionalCallbackAfterInit();
+            catch exp
+            end
         end
         chain_preprocess(chain.init.plugins);
         blnRun = true;

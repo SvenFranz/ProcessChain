@@ -488,7 +488,9 @@ setPanelChainTitle();
             end
         end
         for count = 1 : length(handles.RecentFiles)
-            set(handles.RecentFiles(count), 'enable', 'on');
+            if ishandle(handles.RecentFiles(count))
+                set(handles.RecentFiles(count), 'enable', 'on');
+            end
         end
         loadData();
         drawnow;

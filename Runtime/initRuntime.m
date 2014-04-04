@@ -6,7 +6,7 @@ function ChainVersion = initRuntime()
 %           function call 'indentcode' added
 % Ver. 0.11 changes in Chain are checked        SF
 clc;
-ChainVersion = .15;
+ChainVersion = .16;
 if nargout == 1; return; end
 checkVersion(ChainVersion);
 
@@ -31,9 +31,16 @@ end
 currPath = ['Temp' filesep 'Plugins'];
 addpath([szPath filesep '..' filesep currPath]);
 
+breakpoints = dbstatus;
 readFiles('Plugins');
 readFiles(['.' filesep 'Runtime' filesep 'PluginTemplates']);
 rehash path;
+for idx = 1 : length(breakpoints)
+    if exist(breakpoints(idx).file, 'file') && ~isempty(strfind(breakpoints(idx).file, ['Temp' filesep 'Plugins']))
+        eval(['dbstop in ' breakpoints(idx).file ' at ' num2str(breakpoints(idx).line) ';']);
+    end
+end
+
 
 %     function clearPath(myPath)
 %         files = dir(myPath);
@@ -85,6 +92,7 @@ rehash path;
     end
 
     function TempToPlugins(myPath, file, currPath)
+        disp(['TempToPlugins: ' file]);
         file_in = fopen([currPath filesep file]);
         textIn = textscan(file_in, '%s', 'Delimiter','\n');
         fclose(file_in);
@@ -115,6 +123,7 @@ rehash path;
     end
 
     function PluginsToTemp(myPath, file, currPath)
+        disp(['PluginsToTemp: ' file]);
         file_in = fopen([myPath filesep file]);
         textIn = textscan(file_in, '%s', 'Delimiter','\n');
         fclose(file_in);
