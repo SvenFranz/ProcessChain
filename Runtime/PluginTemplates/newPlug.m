@@ -60,11 +60,13 @@ this.getMax = @getMax;
 this.getOptions = @getOptions;
 this.varnames = @varnames;
 this.setPlugins = @setPlugins;
+this.IsDisabled = @IsDisabled;
 setVar('Enabled', 1, 'bool');
 setVar('Debug', 1, 'bool');
 BlockSettingsIn = struct;
 BlockSettingsOut = struct;
 blnHasChanges = false;
+blnIsDisabled = false;
 
     function val = setVar(varName, varValue, varType, minVar, maxVar)
         temp = [];
@@ -253,6 +255,14 @@ blnHasChanges = false;
                     disp(sprintf('%s (%s, [%f, %f]):\t%f', currVar, vars.(currVar).type, vars.(currVar).min, vars.(currVar).max, vars.(currVar).value));
                 end
             end
+        end
+    end
+
+    function blnVal = IsDisabled(blnVal)
+        if nargin == 1
+            blnIsDisabled = blnVal;
+        else
+            blnVal = blnIsDisabled;
         end
     end
 

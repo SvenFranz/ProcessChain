@@ -14,14 +14,20 @@ for count = 1 : length(plugins)
     end
     AlgoCom.debug = struct;
     if plugin.getVar('Enabled')
+        plugin.IsDisabled(false);
         [Settings] = plugin.init(Settings);
+        plugin.UpdateVarsAfterInit();
         if isfield(AlgoCom, 'debug') && plugin.getVar('Debug')
             Debug.(char(plugins(count))) = AlgoCom.debug;
         end
     else
-        plugin.init(Settings);
+        plugin.IsDisabled(true);
+        try
+            plugin.init(Settings);
+        catch exp
+        end
+            
     end
-    plugin.UpdateVarsAfterInit();
     AlgoCom.debug = struct;
     drawnow;
     %     end

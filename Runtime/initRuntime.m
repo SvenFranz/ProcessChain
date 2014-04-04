@@ -1,15 +1,15 @@
 function ChainVersion = initRuntime()
-% Author: S. Franz (c) ITAS/IHA @ Jade Hochschule applied licence see EOF 
+% Author: S. Franz (c) ITAS/IHA @ Jade Hochschule applied licence see EOF
 % Version History:
 % Ver. 0.01 initial create 20-Mar-2014 			 SF
 % Ver. 0.1  unnecessary path information removed automatically SF
 %           function call 'indentcode' added
-% Ver. 0.11 changes in Chain are checked        SF  
+% Ver. 0.11 changes in Chain are checked        SF
 clc;
-ChainVersion = .13;
+ChainVersion = .15;
 if nargout == 1; return; end
 checkVersion(ChainVersion);
-    
+
 clear mex;
 fclose all;
 munlock;
@@ -22,7 +22,7 @@ folders = regexp(path, ';', 'split');
 idx = strfind(folders, [pwd filesep 'Plugins']);
 for currIdx = 1 : length(idx)
     if cell2mat(idx(currIdx))
-       rmpath(char(folders(currIdx)));
+        rmpath(char(folders(currIdx)));
     end
 end
 if ~isdir(['Temp' filesep 'Plugins'])
@@ -32,7 +32,7 @@ currPath = ['Temp' filesep 'Plugins'];
 addpath([szPath filesep '..' filesep currPath]);
 
 readFiles('Plugins');
-readFiles(['Runtime' filesep 'PluginTemplates']);
+readFiles(['.' filesep 'Runtime' filesep 'PluginTemplates']);
 rehash path;
 
 %     function clearPath(myPath)
@@ -49,12 +49,12 @@ rehash path;
 %     end
 
     function readFiles(myPath)
-%         if ~strcmp(myPath, 'Runtime\PluginTemplates')
-%             %currPath = ['Temp\' myPath];
-%             %addpath(currPath);
-%         else
-%             currPath = 'Temp\Plugins';
-%         end
+        %         if ~strcmp(myPath, 'Runtime\PluginTemplates')
+        %             %currPath = ['Temp\' myPath];
+        %             %addpath(currPath);
+        %         else
+        %             currPath = 'Temp\Plugins';
+        %         end
         files = dir(myPath);
         for fileNo = 3 : length(files)
             file = files(fileNo).name;
@@ -66,9 +66,9 @@ rehash path;
                 end
             end
             if isdir([myPath filesep file])
-%                 if ~isdir([currPath '\' file])
-%                     mkdir([currPath '\' file]);
-%                 end
+                %                 if ~isdir([currPath '\' file])
+                %                     mkdir([currPath '\' file]);
+                %                 end
                 readFiles([myPath filesep file])
             elseif length(file) > 8 && strcmp(file(end - 8 : end), '_Plugin.m')
                 if tmpMyNum < files(fileNo).datenum
@@ -111,6 +111,7 @@ rehash path;
         file_out = fopen([myPath filesep file], 'w');
         fwrite(file_out, OutData);
         fclose(file_out);
+        java.io.File([currPath filesep file]).setLastModified(java.lang.System.currentTimeMillis);
     end
 
     function PluginsToTemp(myPath, file, currPath)
@@ -121,7 +122,7 @@ rehash path;
         for count = 1 : length(textIn{1}) - 1
             OutData{length(OutData) + 1} = [char(textIn{1}{count}) char(13)];
         end
-        file_in = fopen(['Runtime' filesep 'PluginTemplates' filesep 'newPlug.m']);
+        file_in = fopen(['.' filesep 'Runtime' filesep 'PluginTemplates' filesep 'newPlug.m']);
         textIn = textscan(file_in, '%s', 'Delimiter','\n');
         fclose(file_in);
         blnWrite = false;
@@ -153,6 +154,7 @@ rehash path;
         file_out = fopen([currPath filesep file], 'w');
         fwrite(file_out, OutData);
         fclose(file_out);
+        java.io.File([myPath filesep file]).setLastModified(java.lang.System.currentTimeMillis);
     end
 end
 
@@ -160,20 +162,20 @@ end
 % Copyright (c) <2014> S. Franz
 % Institut für Technische Assistenzsysteme
 % Institute for Hearing Technology and Audiology
-% Jade University of Applied Sciences 
-% Permission is hereby granted, free of charge, to any person obtaining 
-% a copy of this software and associated documentation files 
-% (the "Software"), to deal in the Software without restriction, including 
-% without limitation the rights to use, copy, modify, merge, publish, 
+% Jade University of Applied Sciences
+% Permission is hereby granted, free of charge, to any person obtaining
+% a copy of this software and associated documentation files
+% (the "Software"), to deal in the Software without restriction, including
+% without limitation the rights to use, copy, modify, merge, publish,
 % distribute, sublicense, and/or sell copies of the Software, and to
 % permit persons to whom the Software is furnished to do so, subject
 % to the following conditions:
-% The above copyright notice and this permission notice shall be included 
+% The above copyright notice and this permission notice shall be included
 % in all copies or substantial portions of the Software.
-% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
-% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
-% IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY 
-% CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
-% TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
+% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+% IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+% CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+% TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 % SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
