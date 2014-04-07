@@ -43,7 +43,11 @@ if ~exist('chain', 'var') || isempty(chain)
 end
 
 load GUI_controls.mat
-handles.figure = figure('Units', 'normalized', 'position', [.15 .2 .7 .6], 'CloseRequestFcn', @CloseReq, 'tag', 'main', 'WindowButtonUpFcn', @WindowButtonUpFcn);
+figurePos.Mainfigure = [.15 .2 .7 .6];
+if exist(fullfile('Runtime', 'figurePos.mat'), 'file')
+    load (fullfile('Runtime', 'figurePos.mat'));
+end
+handles.figure = figure('Units', 'normalized', 'position', figurePos.Mainfigure, 'CloseRequestFcn', @CloseReq, 'tag', 'main', 'WindowButtonUpFcn', @WindowButtonUpFcn, 'ResizeFcn', @showSettings);
 set(handles.figure, 'MenuBar', 'none');
 
 handles.menubar(1) = uimenu('Parent', handles.figure, 'Label', 'File', 'Tag','uimenubar1');
@@ -69,6 +73,7 @@ handles.menubar(4) = uimenu('Parent', handles.figure, 'Label', 'Configs', 'Tag',
 handles.RecentFiles = [];
 handles.menubar(5) = uimenu('Parent', handles.figure, 'Label', 'Help', 'Tag','uimenubar3');
 handles.uimenuItem(13) = uimenu('Parent', handles.menubar(5), 'Label', 'About ProcessChain', 'Callback', @VersionInfo);
+handles.SettingsSlider = [];
 
 RecentFiles = [];
 updateRecentFiles(FileName)
@@ -87,7 +92,7 @@ handles.toolbarItem(10) = uipushtool('Parent', handles.uitoolbar, 'ClickedCallba
 handles.toolbarItem(11) = uipushtool('Parent', handles.uitoolbar, 'ClickedCallback', @run, 'CData',mat{11}, 'Tag', 'debug', 'Tooltip', 'Run Debug');
 
 handles.panelChain = uipanel('Parent', handles.figure, 'Title', 'Pluginchain', 'FontSize', 10, 'Units', 'normalized', 'position', [0 .33 .45 .67]);
-handles.panelSettings = uipanel('Parent', handles.figure, 'Title', 'Settings', 'FontSize', 10, 'Units', 'normalized', 'position', [.45 .33 .55 .67]);
+handles.panelSettings = uipanel('Parent', handles.figure, 'Title', 'Settings', 'FontSize', 10,'position', [.45 .33 .55 .67]);
 
 handles.listbox = uicontrol('Parent', handles.panelChain, 'Style', 'listbox', 'FontSize', 10, 'Units', 'normalized', 'position', [0 0 1 1], 'Callback', @selectPlugin, 'FontName', 'Courier New');
 ContextMenu=uicontextmenu;
@@ -164,8 +169,8 @@ setPanelChainTitle();
                 file = findFile(plugin, ['.' filesep 'Runtime']);
                 if isempty(file)
                     if ~isempty(findFile([plugin(1 : end -1) 'p'], ['.' filesep 'Plugins']))
-                       msgbox('This Plugin is compiled in p-Code and not editable!', 'modal'); 
-                    end                    
+                        msgbox('This Plugin is compiled in p-Code and not editable!', 'modal');
+                    end
                 end
             end
             if ~isempty(file)
@@ -452,7 +457,7 @@ setPanelChainTitle();
         if exist(['Temp' filesep 'temp.cfg'], 'file')
             delete(['Temp' filesep 'temp.cfg']);
         end
-        try 
+        try
             dbquit;
         catch exp
         end
@@ -498,7 +503,7 @@ setPanelChainTitle();
     end
 
     function appendInfoPanel(strpic_message)
-        if ~isempty(InfoBrowser)
+        if ~isempty(InfoBrowser) && ishandle(InfoBrowser)
             currentpic_message = char(InfoBrowser.getHtmlText());
             idx = strfind(currentpic_message, '</html>');
             if ~isempty(currentpic_message)
@@ -622,45 +627,73 @@ setPanelChainTitle();
         end
     end
 
-    function showSettings()
-        vars = selectedPlugin.plugin.varnames();
-        for count = 1 : length(vars)
-            [value type myMin myMax options] = selectedPlugin.plugin.getVar(char(vars(count)));
-            pos = [0 .99-(count)*0.05 .48 0.05];
-            temp = selectedPlugin.plugin.getType(char(vars(count)));
-            if strcmp(temp, 'numeric') || strcmp(temp, 'integer')
-                temp = [' (' temp ')'];
-            else
-                temp = [];
+    function showSettings(hObject, ~)
+        countInvisible = 0;
+        if ~isempty(selectedPlugin.plugin)
+            sliderValue = 0;
+            if ~isempty(handles.SettingsSlider) && ishandle(handles.SettingsSlider) && strcmp(get(handles.SettingsSlider, 'enable'), 'on')
+                sliderValue = round(get(handles.SettingsSlider, 'max') - get(handles.SettingsSlider, 'value'));
             end
-            uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'text', 'String', [char(vars(count)) temp], 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left');
-            pos([1 3]) = [.5 .48];
-            if strcmp(type, 'bool')
-                h = uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'checkbox', 'value', value, 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue);
-                if strcmp(selectedPlugin.name, 'init') && (strcmp(char(vars(count)), 'Enabled') || strcmp(char(vars(count)), 'Debug'))
-                    set(h, 'enable', 'off');
-                elseif strcmp(char(vars(count)), 'Enabled') && selectedPlugin.plugin.IsDisabled() == true && blnIsRunning
-                    set(h, 'enable', 'off');
+            if nargin > 1 && ishandle(handles.panelSettings)
+                delete(get(handles.panelSettings, 'children'));
+            end
+            if nargin > 1 && hObject == handles.figure
+                sliderValue = 0;
+            end
+            vars = selectedPlugin.plugin.varnames();
+            set(handles.panelSettings, 'Units', 'pixels');
+            pos0 = get(handles.panelSettings, 'Position');
+            pos0(3) = pos0(3)-30;
+            for count = 1 : length(vars)
+                [value type myMin myMax options] = selectedPlugin.plugin.getVar(char(vars(count)));
+                pos = [10 pos0(4)-40-(count-1-sliderValue)*24 pos0(3)/2 18];
+                if pos(2) > 0 && count > sliderValue
+                    temp = selectedPlugin.plugin.getType(char(vars(count)));
+                    if strcmp(temp, 'numeric') || strcmp(temp, 'integer')
+                        temp = [' (' temp ')'];
+                    else
+                        temp = [];
+                    end
+                    uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'text', 'String', [char(vars(count)) temp], 'Units', 'pixels', 'Position', pos, 'HorizontalAlignment', 'left', 'FontSize', 8);
+                    pos([1 3 4]) = [pos0(3)/2 pos0(3)/2-10 pos(4)+4];
+                    if strcmp(type, 'bool')
+                        h = uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'checkbox', 'value', value, 'Units', 'pixels', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue);
+                        if strcmp(selectedPlugin.name, 'init') && (strcmp(char(vars(count)), 'Enabled') || strcmp(char(vars(count)), 'Debug'))
+                            set(h, 'enable', 'off');
+                        elseif strcmp(char(vars(count)), 'Enabled') && selectedPlugin.plugin.IsDisabled() == true && blnIsRunning
+                            set(h, 'enable', 'off');
+                        end
+                    elseif strcmp(type, 'list')
+                        val = find(strcmp(options, value) == 1);
+                        val = min(length(options), val);
+                        pos(2) = pos(2);
+                        uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'popupmenu', 'String', options, 'value', val, 'Units', 'pixels', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1], 'FontSize', 8);
+                    elseif strcmp(type, 'colVec') || strcmp(type, 'rowVec') || strcmp(type, 'matrix')
+                        uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', mat2str(value), 'Units', 'pixels', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
+                    elseif strcmp(type, 'numeric') || strcmp(type, 'integer')
+                        pos([1 3]) = [pos0(3)/2 pos0(3)/2-50];
+                        h = uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', value, 'Units', 'pixels', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
+                        myMin = max(myMin, value - 50);
+                        myMax = min(myMax, value + 50);
+                        pos([1 3]) = [pos0(3)/2+pos0(3)/2-50 20];
+                        img = mat{12};
+                        h1 = uicontrol('Parent', handles.panelSettings, 'tag', [char(vars(count)) '-'], 'Style', 'pushbutton', 'Units', 'pixels', 'Position', pos, 'Callback', @setSliderValue, 'UserData', h, 'CData', img, 'ButtonDownFcn', @setSliderValue, 'Enable', 'inactive');
+                        pos([1 3]) = [pos0(3)/2+pos0(3)/2-50+20 20];
+                        h1 = uicontrol('Parent', handles.panelSettings, 'tag', [char(vars(count)) '+'], 'Style', 'pushbutton', 'Units', 'pixels', 'Position', pos, 'Callback', @setSliderValue, 'UserData', h, 'CData', img(end : -1 : 1, end : -1 : 1, :), 'SelectionHighlight', 'off', 'ButtonDownFcn', @setSliderValue, 'Enable', 'inactive');
+                    else
+                        uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', value, 'Units', 'pixels', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
+                    end
+                else
+                    countInvisible = countInvisible + 1;
                 end
-            elseif strcmp(type, 'list')
-                val = find(strcmp(options, value) == 1);
-                val = min(length(options), val);
-                uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'popupmenu', 'String', options, 'value', val, 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
-            elseif strcmp(type, 'colVec') || strcmp(type, 'rowVec') || strcmp(type, 'matrix')
-                uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', mat2str(value), 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
-            elseif strcmp(type, 'numeric') || strcmp(type, 'integer')
-                pos([1 3]) = [.50 .42];
-                h = uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', value, 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
-                myMin = max(myMin, value - 50);
-                myMax = min(myMax, value + 50);
-                pos([1 3]) = [.92 .07/2];
-                img = mat{12};
-                h1 = uicontrol('Parent', handles.panelSettings, 'tag', [char(vars(count)) '-'], 'Style', 'pushbutton', 'Units', 'normalized', 'Position', pos, 'Callback', @setSliderValue, 'UserData', h, 'CData', img, 'ButtonDownFcn', @setSliderValue, 'Enable', 'inactive');
-                pos([1 3]) = [.92+pos(3) .07/2];
-                h1 = uicontrol('Parent', handles.panelSettings, 'tag', [char(vars(count)) '+'], 'Style', 'pushbutton', 'Units', 'normalized', 'Position', pos, 'Callback', @setSliderValue, 'UserData', h, 'CData', img(end : -1 : 1, end : -1 : 1, :), 'SelectionHighlight', 'off', 'ButtonDownFcn', @setSliderValue, 'Enable', 'inactive');
-            else
-                uicontrol('Parent', handles.panelSettings, 'tag', char(vars(count)), 'Style', 'edit', 'String', value, 'Units', 'normalized', 'Position', pos, 'HorizontalAlignment', 'left', 'Callback', @setValue, 'BackgroundColor', [1 1 1]);
             end
+            handles.SettingsSlider = uicontrol('Parent', handles.panelSettings, 'Style', 'Slider', 'Units', 'pixels', 'Position', [pos0(3)+9 0 20 pos0(4)-12], 'CallBack', @showSettings);
+            if countInvisible > 0
+                set(handles.SettingsSlider, 'min', 0, 'max', countInvisible, 'SliderStep', [1/countInvisible 1/countInvisible], 'Value', max(min(countInvisible - sliderValue, countInvisible), 0));
+            else
+                set(handles.SettingsSlider, 'enable', 'off');
+            end
+            set(handles.panelSettings, 'Units', 'normalized');
         end
     end
 
@@ -682,7 +715,7 @@ setPanelChainTitle();
         if strcmp(type, 'numeric')
             if ~(isinf(myMin) || isinf(myMax))
                 step = (myMax - myMin) / 100;
-            end            
+            end
         end
         counter = 1;
         while blnMouseDown
@@ -790,8 +823,14 @@ setPanelChainTitle();
             showDebug([], true);
         catch exp
         end
-        if checkHasChanges()
-            delete(gcf);
+        if exist(fullfile('Runtime', 'figurePos.mat'), 'file')
+            figurePos = load(fullfile('Runtime', 'figurePos.mat'));
+            figurePos = figurePos.figurePos;
+        end
+        figurePos.Mainfigure = get(handles.figure, 'Position');
+        save(fullfile('Runtime', 'figurePos.mat'), 'figurePos');
+        if checkHasChanges() && ishandle(handles.figure);
+            delete(handles.figure);
         end
     end
 

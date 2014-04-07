@@ -9,6 +9,7 @@ end
 if nargin < 3
     bringToFront = false;
 end
+figurePos = [];
 figures = get(0, 'children');
 this.handles.figure = 0;
 for ii = 1 : length(figures)
@@ -20,26 +21,38 @@ for ii = 1 : length(figures)
 end
 if ~blnClose
     if ~this.handles.figure
-        this.handles.figure = figure('Units', 'normalized', 'MenuBar', 'none', 'ToolBar', 'figure', 'Tag', 'debug', 'Name', 'Debug');
-        this.handles.listbox = uicontrol('Parent', this.handles.figure, 'Style', 'listbox', 'FontSize', 10, 'Units', 'normalized', 'position', [0 0 .33 1]);
-        this.handles.panel = uipanel('Parent', this.handles.figure, 'Title', '', 'FontSize', 10, 'Units', 'normalized', 'position', [.33 0 .67 1]);
-        this.handles.myAxes = [];
-        this.updateData = @updateData;
-        set(this.handles.figure, 'UserData', this)
-        figure(this.handles.Mainfigure);
+        if isfield(this.handles, 'Mainfigure') && ishandle(this.handles.Mainfigure)
+            if exist(fullfile('Runtime', 'figurePos.mat'), 'file')
+                load (fullfile('Runtime', 'figurePos.mat'));
+            end
+            if ~isfield(figurePos, 'Debugfigure')
+                figurePos.Debugfigure = [.1 .3 .7 .6];
+            end
+            this.handles.figure = figure('Units', 'normalized', 'MenuBar', 'none', 'ToolBar', 'figure', 'Tag', 'debug', 'Name', 'Debug', 'Position', figurePos.Debugfigure, 'CloseRequestFcn', @CloseReq);
+            this.handles.listbox = uicontrol('Parent', this.handles.figure, 'Style', 'listbox', 'FontSize', 10, 'Units', 'normalized', 'position', [0 0 .33 1]);
+            this.handles.panel = uipanel('Parent', this.handles.figure, 'Title', '', 'FontSize', 10, 'Units', 'normalized', 'position', [.33 0 .67 1]);
+            this.handles.myAxes = [];
+            this.updateData = @updateData;
+            set(this.handles.figure, 'UserData', this)
+            figure(this.handles.Mainfigure);
+        end
     else
         this = get(this.handles.figure, 'UserData');
-%         figure(this.handles.Mainfigure);
+        %         figure(this.handles.Mainfigure);
     end
 end
 if blnClose
     if ishandle(this.handles.figure) && this.handles.figure > 0
-        delete(this.handles.figure);
+        CloseReq();
     end
 elseif bringToFront
-%     figure(this.handles.figure);
+    %     figure(this.handles.figure);
 else
-    this.updateData(debugData);
+    try
+        this.updateData(debugData);
+    catch
+        CloseReq();
+    end
 end
 
     function updateData(debugData)
@@ -110,6 +123,21 @@ end
         
         %         plot(this.handles.axes(1), debugData.test.spec);
         drawnow;
+    end
+
+    function CloseReq(~,~)
+        if exist(fullfile('Runtime', 'figurePos.mat'), 'file')
+            figurePos = load(fullfile('Runtime', 'figurePos.mat'));
+            figurePos = figurePos.figurePos;
+        end
+        if ishandle(this.handles.figure)
+            try
+                figurePos.Debugfigure = get(this.handles.figure, 'Position');
+                save(fullfile('Runtime', 'figurePos.mat'), 'figurePos');
+                delete(this.handles.figure);
+            catch exp
+            end
+        end
     end
 end
 

@@ -92,7 +92,6 @@ end
     end
 
     function TempToPlugins(myPath, file, currPath)
-        disp(['TempToPlugins: ' file]);
         file_in = fopen([currPath filesep file]);
         textIn = textscan(file_in, '%s', 'Delimiter','\n');
         fclose(file_in);
@@ -123,7 +122,6 @@ end
     end
 
     function PluginsToTemp(myPath, file, currPath)
-        disp(['PluginsToTemp: ' file]);
         file_in = fopen([myPath filesep file]);
         textIn = textscan(file_in, '%s', 'Delimiter','\n');
         fclose(file_in);
