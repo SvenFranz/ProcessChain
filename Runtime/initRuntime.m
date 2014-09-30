@@ -37,7 +37,10 @@ readFiles(['.' filesep 'Runtime' filesep 'PluginTemplates']);
 rehash path;
 for idx = 1 : length(breakpoints)
     if exist(breakpoints(idx).file, 'file') && ~isempty(strfind(breakpoints(idx).file, ['Temp' filesep 'Plugins']))
-        eval(['dbstop in ' breakpoints(idx).file ' at ' num2str(breakpoints(idx).line) ';']);
+        try
+            eval(['dbstop in ' breakpoints(idx).file ' at ' num2str(breakpoints(idx).line) ';']);
+        catch exp
+        end
     end
 end
 

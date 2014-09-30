@@ -1,4 +1,4 @@
-function showDebug(debugData, blnClose, bringToFront)
+function showDebug(debugData, blnClose, bringToFront, blnResizeYlim)
 % Author: S. Franz (c) ITAS/IHA @ Jade Hochschule applied licence see EOF
 % Version History:
 % Ver. 0.01 initial create 20-Mar-2014 			 SF
@@ -8,6 +8,9 @@ if nargin < 2
 end
 if nargin < 3
     bringToFront = false;
+end
+if nargin < 4
+    blnResizeYlim = false;
 end
 figurePos = [];
 figures = get(0, 'children');
@@ -50,7 +53,8 @@ elseif bringToFront
 else
     try
         this.updateData(debugData);
-    catch
+    catch exp
+        disp(exp.message);
         CloseReq();
     end
 end
@@ -104,17 +108,44 @@ end
                 %ylim(h, [.5 size(data, 1)+.5]);
             else
                 minMax = get(this.handles.myAxes(count), 'UserData');
-                if isempty(minMax)
-                    minMax(1) = min(min(data)) - eps;
-                    minMax(2) = max(max(data)) + eps;
+                if blnResizeYlim
+                    NewMinMax(1) = min(min(data)) - eps;
+                    NewMinMax(2) = max(max(data)) + eps;
+                    if isempty(minMax)
+                        minMax = NewMinMax;
+                    end
+                    if NewMinMax(1) < minMax(1)
+                        minMax(1) = NewMinMax(1);
+                    else
+                        minMax(1) = .95 * minMax(1) + (1 - .95) * NewMinMax(1);
+                    end
+                    if NewMinMax(2) > minMax(2)
+                        minMax(2) = NewMinMax(2);
+                    else
+                        minMax(2) = .95 * minMax(2) + (1 - .95) * NewMinMax(2);
+                    end
                 else
-                    minMax(1) = min(minMax(1), min(min(data))) - eps;
-                    minMax(2) = max(minMax(2), max(max(data))) + eps;
+                    if isempty(minMax)
+                        minMax(1) = min(min(data)) - eps;
+                        minMax(2) = max(max(data)) + eps;
+                    else
+                        minMax(1) = min(minMax(1), min(min(data)));
+                        minMax(2) = max(minMax(2), max(max(data)));
+                    end
                 end
-                plot(data, 'parent', this.handles.myAxes(count));
-                ylim(this.handles.myAxes(count), minMax);
-                xlim(this.handles.myAxes(count), [1 size(data, 1)]);
-                set(this.handles.myAxes(count), 'UserData', minMax);
+                if minMax(1) == minMax(2)
+                    minMax(2) = minMax(1) + .1;
+                end
+                try
+                    plot(data, 'parent', this.handles.myAxes(count));
+                    if ~find(isnan(minMax), 1)
+                        ylim(this.handles.myAxes(count), minMax);
+                    end
+                    xlim(this.handles.myAxes(count), [1 size(data, 1)]);
+                    set(this.handles.myAxes(count), 'UserData', minMax);
+                catch exp
+                    disp(exp)
+                end
             end
             title(this.handles.myAxes(count), strrep(char(plotNames{count}), '_', '\_'));
         end

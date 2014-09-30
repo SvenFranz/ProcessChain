@@ -8,7 +8,7 @@ global Debug;
 plugins = fieldnames(chain);
 for count = 1 : length(plugins)
     plugin = chain.(char(plugins(count)));
-%     if plugin.getVar('Enabled')
+    if plugin.getVar('Enabled')
         AlgoCom.debug = struct;
         plugin.preprocess();
         if isfield(AlgoCom, 'debug') && plugin.getVar('Debug')
@@ -16,7 +16,7 @@ for count = 1 : length(plugins)
         end
         AlgoCom.debug = struct;
         drawnow;
-%     end
+    end
 end
 
 %--------------------Licence ---------------------------------------------

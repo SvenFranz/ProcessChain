@@ -326,8 +326,10 @@ setPanelChainTitle();
             cd(rootFolder);
             initRuntime();
             [File, PathName] = uigetfile('*_Plugin.m',  'Plugin-files (*_Plugin.m)', ['Plugins' filesep]);
-            if strfind(File, '_Plugin.m')
-                pluginName = inputdlg({'Name'},'',1,{strrep(File, '_Plugin.m', '')});
+            if ~isempty(strfind(File, '_Plugin.m')) || ~isempty(strfind(File, '_Plugin.p'))
+                pluginName = strrep(File, '_Plugin.m', '');
+                pluginName = strrep(pluginName, '_Plugin.p', '');
+                pluginName = inputdlg({'Name'},'',1, {pluginName});
                 if ~isempty(pluginName)
                     newChain = tempchain;
                     newChain.(selectedPlugin.name).plugins.(char(pluginName)) = eval(File(1 : end - 2));

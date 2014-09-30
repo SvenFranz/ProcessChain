@@ -22,11 +22,6 @@ for count = 1 : length(plugins)
         end
     else
         plugin.IsDisabled(true);
-        try
-            plugin.init(Settings);
-        catch exp
-        end
-            
     end
     AlgoCom.debug = struct;
     drawnow;
